@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<html ng-app="ApartmentApplication">
+	<head>
+		<meta charset="utf-8">
+		<title>Расчет вариантов приобретения недвижимости</title>
+		<style>input { margin: 4px }</style>
+		<script src="angular.min.js"></script>
+		<script src="calculators.js"></script>
+		<script src="approaches.js"></script>
+	</head>
+<body ng-controller="ApartmentController">
+
+<p>Рассчет вариантов приобретения недвижимости</p>
+<div>Сумма в наличии (рубли): <input ng-model="currentSum" type="number"/></div>
+<div>Ежемесячное пополнение (рубли): <input ng-model="monthlyIncome" type="number"/></div>
+<div>Ежемесячная стоимость аренды квартиры (рубли): <input ng-model="rentPrice" type="number"/></div>
+<div>Стоимость готового жилья (рубли): <input ng-model="readyApartmentPrice" type="number"/></div>
+<div>Стоимость строящегося жилья (рубли): <input ng-model="apartmentUnderConstructionPrice" type="number"/></div>
+<div>Инфляция цен на жилье (%): <input ng-model="apartmentInflation" type="number"/></div>
+<div>Текущая ставка по ипотеке (аннуитентные платежи) (%): <input ng-model="mortgageRate" type="number"/></div>
+<div>Текущая ставка по вкладу (с капитализацией процентов) (%): <input ng-model="depositRate" type="number"/></div>
+<!--<div>Ежегодное повышение цены съем квартиры (рубли): <input ng-model="rentPriceIncrease" type="number"/></div>-->
+<div>
+  <button ng-click="calculate()">Рассчитать</button>
+</div>
+<ul>
+	<li ng-repeat="result in results | orderBy: 'duration'">
+		<p>{{result.name}}</p>
+		<div>Длительность: {{(result.duration - (result.duration % 12)) / 12}} года {{result.duration % 12}} месяцев</div>
+		<div>Ежемесячная плата (рубли): {{result.monthlyPayment}}</div>
+		<div>Выплаченная сумма (рубли): {{result.totalPayment}}</div>
+	</li>
+<ul>
+
+<script>
+var app = angular.module('ApartmentApplication', []);
+app.controller('ApartmentController', function($scope){
+	$scope.currentSum = 1000000;
+	$scope.monthlyIncome = 50000;
+	$scope.rentPrice = 21000;
+	$scope.readyApartmentPrice = 5000000;
+	$scope.apartmentUnderConstructionPrice = 3500000;
+	$scope.apartmentInflation = 5;
+	$scope.mortgageRate = 13;
+	$scope.depositRate = 10;
+	$scope.rentPriceIncrease = 1000;
+	
+	$scope.calculate = function() {
+		$scope.results = [];
+	
+		var depositApproach = new DepositApproach(
+			$scope.currentSum, 
+			$scope.monthlyIncome, 
+			$scope.depositRate, 
+			$scope.apartmentInflation);	
+			
+		var result = depositApproach.estimate($scope.apartmentUnderConstructionPrice);
+		result.name = "Депозит на строящееся жилье";		
+		$scope.results.push(result);	
+			
+		var result = depositApproach.estimate($scope.readyApartmentPrice);
+		result.name = "Депозит на готовое жилье";		
+		$scope.results.push(result);	
+
+		var mortgageApproach = new MortgageApproach(
+			$scope.currentSum,
+			$scope.mortgageRate);
+			
+		var result = mortgageApproach.estimate($scope.readyApartmentPrice, $scope.monthlyIncome + $scope.rentPrice);
+		result.name = "Ипотека на готовое жильё";
+		$scope.results.push(result);
+		
+		var result = mortgageApproach.estimate($scope.apartmentUnderConstructionPrice, $scope.monthlyIncome);
+		result.name = "Ипотека на строящееся жильё";
+		$scope.results.push(result);
+	};
+});
+</script>
+
+</body>
+</html>
